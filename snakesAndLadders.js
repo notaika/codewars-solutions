@@ -45,6 +45,7 @@ console.log = function (...args) {
 // ================================ IGNORE ABOVE THIS ================================
 
 class SnakesLadders {
+    // static constants
   static ladderPos = {
     2: 38,
     7: 14,
@@ -71,7 +72,7 @@ class SnakesLadders {
     99: 80,
   };
   constructor() {
-    // all constants and also all variables that we need to keep the state of
+    // variables that we need to keep the state of
     this.playerPos = { 1: 0, 2: 0 };
     this.playerTurn = 1;
     this.isGameOver = false;
@@ -93,13 +94,10 @@ class SnakesLadders {
         return `Player ${this.playerTurn} Wins!`;
       }
 
-      if (die1 === die2) {
+      if (die1 !== die2) {
         // if both die were the same number roll, keep the playerTurn for next play
-        this.playerTurn = this.playerTurn === 1 ? 1 : 2;
-      } else {
-        //else, switch player turn after every play call
         this.playerTurn = this.playerTurn === 1 ? 2 : 1;
-      }
+      } 
 
       // no game winner and game is not over, return the current player and current position
       return `Player ${currPlayer} is on square ${position}`;
@@ -140,3 +138,88 @@ game1.play(1, 1); // Player 1 - hits a ladder at 2, moves to 38
 game1.play(1, 5); // Player 1 again - since he die were equal, moves to 44
 game1.play(6, 2); // Player 2 - moves to 31
 game1.play(1, 1); // Player 1 - hits a snake at 46, slides down to 25
+
+// ============================
+// CLEAN, REFACTORED SOLUTION
+// ============================
+
+// Player is now a separate class, which encapsulates all logic related to player state.
+// Cleaner and object-oriented approach—every player manages their own position.
+class Player {
+  constructor(name) {
+    this.name = name;
+    this.position = 0; // each player stores their own position
+  }
+
+  move(steps) {
+    this.position += steps; // encapsulates movement logic
+  }
+
+  goTo(position) {
+    this.position = position; // optional helper if you need to jump to a square directly
+  }
+}
+
+class SnakesLadders2 {
+  constructor() {
+    this.lastSquare = 100;
+
+    // Constant values shouldn't change — `Object.freeze` protects them
+    this.snakes = Object.freeze({
+      16: 6, 46: 25, 49: 11, 62: 19, 64: 60,
+      74: 53, 89: 68, 92: 88, 95: 75, 99: 80
+    });
+
+    this.ladders = Object.freeze({
+      2: 38, 7: 14, 8: 31, 15: 26, 21: 42,
+      28: 84, 36: 44, 51: 67, 71: 91, 78: 98, 87: 94
+    });
+
+    // Stores the two players
+    this.players = [new Player("Player 1"), new Player("Player 2")];
+
+    // Tracks which player's turn it is
+    this.currentPlayerIdx = 0;
+
+    // Tracks win state
+    this.isGameOver = false;
+  }
+
+  // Getter to always return the active player
+  // get keyword makes the method act like a read-only property (without calling ())
+  // can't assign to it, unless you also define a set
+  get currentPlayer() {
+    return this.players[this.currentPlayerIdx];
+  }
+
+  play(die1, die2) {
+    if (this.isGameOver) return "Game over!";
+
+    const player = this.currentPlayer;
+
+    player.move(die1 + die2);
+
+    // Handles bounce-back logic when player overshoots 100
+    if (player.position > this.lastSquare) {
+      player.position = this.lastSquare - (player.position - this.lastSquare);
+    }
+
+    // Move the player if they're on a snake or ladder
+    player.position = this.snakes[player.position] || this.ladders[player.position] || player.position;
+
+    // Win condition check
+    if (player.position === this.lastSquare) {
+      this.isGameOver = true;
+      return `${player.name} wins!`;
+    }
+
+    const status = `${player.name} is on square ${player.position}`;
+
+    // Only switch player if it's not a double
+    if (die1 !== die2) {
+      this.currentPlayerIdx = 1 - this.currentPlayerIdx;
+    }
+
+    return status;
+  }
+}
